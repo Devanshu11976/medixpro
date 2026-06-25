@@ -72,7 +72,12 @@ export function useAuth() {
       return session;
     } catch (err: any) {
       setLoading(false);
-      const detail = err.response?.data?.detail || "Invalid email or password";
+      let detail = "Invalid email or password";
+      if (err.message === "Network Error" || !err.response) {
+        detail = "Could not connect to server. Please verify NEXT_PUBLIC_API_URL is configured correctly in Vercel.";
+      } else if (err.response.data && (err.response.data as any).detail) {
+        detail = (err.response.data as any).detail;
+      }
       throw new Error(detail);
     }
   };
@@ -97,7 +102,12 @@ export function useAuth() {
       return { session, profile_complete };
     } catch (err: any) {
       setLoading(false);
-      const detail = err.response?.data?.detail || "Google authentication failed";
+      let detail = "Google authentication failed";
+      if (err.message === "Network Error" || !err.response) {
+        detail = "Could not connect to server. Please verify NEXT_PUBLIC_API_URL is configured correctly in Vercel.";
+      } else if (err.response.data && (err.response.data as any).detail) {
+        detail = (err.response.data as any).detail;
+      }
       throw new Error(detail);
     }
   };
@@ -121,7 +131,12 @@ export function useAuth() {
       setLoading(false);
     } catch (err: any) {
       setLoading(false);
-      const detail = err.response?.data?.detail || "Failed to complete profile details";
+      let detail = "Failed to complete profile details";
+      if (err.message === "Network Error" || !err.response) {
+        detail = "Could not connect to server. Please verify NEXT_PUBLIC_API_URL is configured correctly in Vercel.";
+      } else if (err.response.data && (err.response.data as any).detail) {
+        detail = (err.response.data as any).detail;
+      }
       throw new Error(detail);
     }
   };
