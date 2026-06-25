@@ -22,8 +22,8 @@ export const metadata: Metadata = {
   },
   description: "Medixpro is a comprehensive wholesale medical store ERP system for managing inventory, orders, retailer accounts, and billing operations.",
   keywords: ["medical ERP", "wholesale pharmacy", "inventory management", "medical store", "pharmacy software", "retailer management"],
-  authors: [{ name: "Medixpro Team" }],
-  creator: "Medixpro",
+  authors: [{ name: "Devanshu Sharma" }, { name: "Medixpro Team" }],
+  creator: "Devanshu Sharma",
   publisher: "Medixpro",
   robots: {
     index: true,

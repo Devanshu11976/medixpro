@@ -288,6 +288,11 @@ export function DashboardSidebar({ isMobileOpen = false, onClose }: DashboardSid
             <LogOut className="h-[18px] w-[18px] shrink-0" />
             Logout
           </button>
+          <div className="pt-2.5 mt-2 border-t border-slate-800/60 text-center">
+            <span className="text-[10.5px] text-slate-500 font-medium tracking-wide">
+              Made with <span className="text-rose-500 animate-pulse inline-block">❤️</span> by <span className="text-slate-400 hover:text-blue-400 transition-colors duration-200 font-semibold cursor-default">Devanshu Sharma</span>
+            </span>
+          </div>
         </div>
       </aside>
     </>

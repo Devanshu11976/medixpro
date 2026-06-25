@@ -26,6 +26,9 @@ export default function NotFound() {
         >
           Go to Homepage
         </Link>
+        <div className="mt-8 text-[11px] text-gray-400">
+          Made with <span className="text-rose-500 animate-pulse">❤️</span> by <span className="font-semibold text-gray-500">Devanshu Sharma</span>
+        </div>
       </div>
     </div>
   );
