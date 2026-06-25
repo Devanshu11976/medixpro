@@ -45,7 +45,7 @@ const INITIAL_ACTIVITIES: Activity[] = [
     actor: "system@medixpro.com",
     category: "Inventory",
     details: "Automated trigger: Low Stock Alert sent for Cetirizine 10mg (28 units remaining).",
-    ip: "localhost",
+    ip: "10.0.0.5",
   },
   {
     id: "LOG-0189",
