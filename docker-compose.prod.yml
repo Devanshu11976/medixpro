@@ -51,7 +51,6 @@ services:
       - api
     env_file:
       - .env
-    command: sh -c "npm run build && npm run start"
     restart: always
     networks:
       - medixpro-network

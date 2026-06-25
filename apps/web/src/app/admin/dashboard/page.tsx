@@ -1,12 +1,6 @@
 "use client";
 
-import type { Metadata } from "next";
 import { useState, useEffect } from "react";
-
-export const metadata: Metadata = {
-  title: "Admin Dashboard",
-  description: "Admin dashboard for financial and operational status of your wholesale pharmacy in Medixpro.",
-};
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { StatCardsRow } from "@/components/dashboard/stat-cards";

@@ -1,12 +1,6 @@
 "use client";
 
-import type { Metadata } from "next";
 import { useState, useEffect } from "react";
-
-export const metadata: Metadata = {
-  title: "Wholesale Medicines Store",
-  description: "Browse and order medicines directly from the warehouse catalog with real-time availability indicators in Medixpro.",
-};
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { Button } from "@/components/ui/button";
