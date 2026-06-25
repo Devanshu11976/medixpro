@@ -61,41 +61,49 @@ async def lifespan(app: FastAPI):
         
     # Database seeding logic (optional - don't fail if it errors)
     try:
-        from database import AsyncSessionLocal
+        from database import get_engine, AsyncSessionLocal
         from app.models.models import User
         from app.utils.security import get_password_hash
         from sqlalchemy.future import select
 
-        async with AsyncSessionLocal() as session:
-            # Check and seed Admin
-            admin_res = await session.execute(select(User).where(User.email == "admin@medixpro.com"))
-            if not admin_res.scalar_one_or_none():
-                admin = User(
-                    email="admin@medixpro.com",
-                    password_hash=get_password_hash("Admin@123"),
-                    name="System Administrator",
-                    role="ADMIN",
-                    status="ACTIVE",
-                    auth_provider="LOCAL"
-                )
-                session.add(admin)
-                logger.info("Admin user seeded")
+        # Ensure engine is initialized
+        eng = get_engine()
+        
+        # Ensure AsyncSessionLocal is initialized
+        global AsyncSessionLocal
+        if AsyncSessionLocal is None:
+            logger.warning("AsyncSessionLocal not initialized, skipping seeding")
+        else:
+            async with AsyncSessionLocal() as session:
+                # Check and seed Admin
+                admin_res = await session.execute(select(User).where(User.email == "admin@medixpro.com"))
+                if not admin_res.scalar_one_or_none():
+                    admin = User(
+                        email="admin@medixpro.com",
+                        password_hash=get_password_hash("Admin@123"),
+                        name="System Administrator",
+                        role="ADMIN",
+                        status="ACTIVE",
+                        auth_provider="LOCAL"
+                    )
+                    session.add(admin)
+                    logger.info("Admin user seeded")
 
-            # Check and seed Worker
-            worker_res = await session.execute(select(User).where(User.email == "worker@medixpro.com"))
-            if not worker_res.scalar_one_or_none():
-                worker = User(
-                    email="worker@medixpro.com",
-                    password_hash=get_password_hash("Worker@123"),
-                    name="Warehouse Operator",
-                    role="WORKER",
-                    status="ACTIVE",
-                    auth_provider="LOCAL"
-                )
-                session.add(worker)
-                logger.info("Worker user seeded")
-                
-            await session.commit()
+                # Check and seed Worker
+                worker_res = await session.execute(select(User).where(User.email == "worker@medixpro.com"))
+                if not worker_res.scalar_one_or_none():
+                    worker = User(
+                        email="worker@medixpro.com",
+                        password_hash=get_password_hash("Worker@123"),
+                        name="Warehouse Operator",
+                        role="WORKER",
+                        status="ACTIVE",
+                        auth_provider="LOCAL"
+                    )
+                    session.add(worker)
+                    logger.info("Worker user seeded")
+                    
+                await session.commit()
     except Exception as e:
         logger.warning(f"Database seeding failed (non-critical): {e}")
     
