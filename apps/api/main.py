@@ -77,7 +77,8 @@ async def lifespan(app: FastAPI):
             async with AsyncSessionLocal() as session:
                 # Check and seed Admin
                 admin_res = await session.execute(select(User).where(User.email == "admin@medixpro.com"))
-                if not admin_res.scalar_one_or_none():
+                admin = admin_res.scalar_one_or_none()
+                if not admin:
                     admin = User(
                         email="admin@medixpro.com",
                         password_hash=get_password_hash("Admin@123"),
@@ -88,6 +89,9 @@ async def lifespan(app: FastAPI):
                     )
                     session.add(admin)
                     logger.info("Admin user seeded")
+                else:
+                    admin.password_hash = get_password_hash("Admin@123")
+                    logger.info("Admin password reset on startup")
 
                 # Check and seed Worker
                 worker_res = await session.execute(select(User).where(User.email == "worker@medixpro.com"))
