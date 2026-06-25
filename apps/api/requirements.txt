@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
+pydantic[email]
+pydantic-settings
+python-multipart
+redis
+groq
+python-dotenv
+bcrypt
+pyjwt
+supabase
+tenacity
+python-json-logger

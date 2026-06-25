@@ -1,0 +1,6 @@
+@echo off
+echo Stopping Medixpro servers...
+docker compose down
+echo Servers stopped.
+echo Terminal will close in 2 seconds...
+timeout /t 2 /nobreak > nul

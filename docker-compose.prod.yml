@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: medixpro-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - medixpro-pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    restart: always
+    networks:
+      - medixpro-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: medixpro-redis
+    ports:
+      - "6379:6379"
+    restart: always
+    networks:
+      - medixpro-network
+
+  api:
+    container_name: medixpro-api
+    build:
+      context: ./apps/api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+    command: gunicorn main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+    restart: always
+    networks:
+      - medixpro-network
+
+  web:
+    container_name: medixpro-web
+    build:
+      context: ./apps/web
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    env_file:
+      - .env
+    command: sh -c "npm run build && npm run start"
+    restart: always
+    networks:
+      - medixpro-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: medixpro-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - web
+      - api
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Uncomment for SSL certificates
+      # - ./nginx/ssl:/etc/nginx/ssl:ro
+    restart: always
+    networks:
+      - medixpro-network
+
+networks:
+  medixpro-network:
+    driver: bridge
+
+volumes:
+  medixpro-pgdata:

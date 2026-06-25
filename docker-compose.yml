@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: medixpro-db
+    ports:
+      - "5432:5432"
+    volumes:
+      - medixpro-pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - medixpro-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: medixpro-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - medixpro-network
+
+  api:
+    container_name: medixpro-api
+    build:
+      context: ./apps/api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./apps/api:/app
+    env_file:
+      - .env
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - medixpro-network
+
+  web:
+    container_name: medixpro-web
+    build:
+      context: ./apps/web
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
+    command: npm run dev
+    networks:
+      - medixpro-network
+
+networks:
+  medixpro-network:
+    driver: bridge
+
+volumes:
+  medixpro-pgdata:
