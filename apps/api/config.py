@@ -74,15 +74,19 @@ class Settings(BaseSettings):
     @field_validator('redis_url')
     @classmethod
     def validate_redis_url(cls, v: str, info) -> str:
+        # Redis is optional - log warning if missing in production but don't fail
         if info.data.get('environment') == 'production' and not v:
-            raise ValueError('REDIS_URL is required in production')
+            import logging
+            logging.warning("REDIS_URL not configured - caching will be disabled")
         return v
     
     @field_validator('supabase_url', 'supabase_publishable_key')
     @classmethod
     def validate_supabase(cls, v: str, info) -> str:
+        # Supabase is optional - log warning if missing in production but don't fail
         if info.data.get('environment') == 'production' and not v:
-            raise ValueError('Supabase credentials are required in production for retailer authentication')
+            import logging
+            logging.warning("Supabase credentials not configured - some features will be disabled")
         return v
 
     @computed_field

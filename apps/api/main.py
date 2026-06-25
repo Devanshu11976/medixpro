@@ -8,12 +8,15 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 from contextlib import asynccontextmanager
 import logging
+import os
 from config import settings
 from app.utils.logger import setup_logging
 
 # Configure structured logging
 setup_logging()
 logger = logging.getLogger(__name__)
+
+# Import after logging is configured
 from app.routers.routes import router as api_router
 from app.utils.health import get_health_status
 from app.middleware.exception_handler import (
@@ -27,68 +30,87 @@ from app.middleware.logging import log_requests
 from app.middleware.rate_limit import rate_limit_middleware
 from app.middleware.security import security_middleware, csrf_protection_middleware
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, settings.log_level),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
     logger.info(f"Starting Medixpro API in {settings.environment} mode")
+    logger.info(f"Environment loaded: PORT={os.getenv('PORT', '8000')}, DATABASE_URL configured: {bool(settings.database_url)}")
     
-    # Create database tables if they do not exist
-    async with engine.begin() as conn:
+    # Initialize database engine (lazy initialization)
+    try:
+        from database import get_engine
+        engine = get_engine()
+        logger.info("Database engine initialized successfully")
+    except Exception as e:
+        logger.error(f"Database engine initialization failed: {e}")
+        # Don't fail startup - health check will report database as disconnected
+    
+    # Create database tables if they do not exist (with error handling)
+    try:
+        from database import get_engine, AsyncSessionLocal
         from app.models.models import User, Medicine, Retailer, Order, OrderItem, Invoice, ActivityLog
-        await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables created/verified")
+        from database import Base
         
-    # Database seeding logic
-    from database import AsyncSessionLocal
-    from app.models.models import User
-    from app.utils.security import get_password_hash
-    from sqlalchemy.future import select
+        eng = get_engine()
+        async with eng.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables created/verified")
+    except Exception as e:
+        logger.error(f"Database table creation failed: {e}")
+        # Continue startup - tables may already exist
+        
+    # Database seeding logic (optional - don't fail if it errors)
+    try:
+        from database import AsyncSessionLocal
+        from app.models.models import User
+        from app.utils.security import get_password_hash
+        from sqlalchemy.future import select
 
-    async with AsyncSessionLocal() as session:
-        # Check and seed Admin
-        admin_res = await session.execute(select(User).where(User.email == "admin@medixpro.com"))
-        if not admin_res.scalar_one_or_none():
-            admin = User(
-                email="admin@medixpro.com",
-                password_hash=get_password_hash("Admin@123"),
-                name="System Administrator",
-                role="ADMIN",
-                status="ACTIVE",
-                auth_provider="LOCAL"
-            )
-            session.add(admin)
-            logger.info("Admin user seeded")
+        async with AsyncSessionLocal() as session:
+            # Check and seed Admin
+            admin_res = await session.execute(select(User).where(User.email == "admin@medixpro.com"))
+            if not admin_res.scalar_one_or_none():
+                admin = User(
+                    email="admin@medixpro.com",
+                    password_hash=get_password_hash("Admin@123"),
+                    name="System Administrator",
+                    role="ADMIN",
+                    status="ACTIVE",
+                    auth_provider="LOCAL"
+                )
+                session.add(admin)
+                logger.info("Admin user seeded")
 
-        # Check and seed Worker
-        worker_res = await session.execute(select(User).where(User.email == "worker@medixpro.com"))
-        if not worker_res.scalar_one_or_none():
-            worker = User(
-                email="worker@medixpro.com",
-                password_hash=get_password_hash("Worker@123"),
-                name="Warehouse Operator",
-                role="WORKER",
-                status="ACTIVE",
-                auth_provider="LOCAL"
-            )
-            session.add(worker)
-            logger.info("Worker user seeded")
-            
-        await session.commit()
+            # Check and seed Worker
+            worker_res = await session.execute(select(User).where(User.email == "worker@medixpro.com"))
+            if not worker_res.scalar_one_or_none():
+                worker = User(
+                    email="worker@medixpro.com",
+                    password_hash=get_password_hash("Worker@123"),
+                    name="Warehouse Operator",
+                    role="WORKER",
+                    status="ACTIVE",
+                    auth_provider="LOCAL"
+                )
+                session.add(worker)
+                logger.info("Worker user seeded")
+                
+            await session.commit()
+    except Exception as e:
+        logger.warning(f"Database seeding failed (non-critical): {e}")
     
-    logger.info("Medixpro API startup complete")
+    logger.info("Medixpro API startup complete - application ready for requests")
     yield
     
     # Shutdown logic
     logger.info("Shutting down Medixpro API")
-    await engine.dispose()
-    logger.info("Database connections closed")
+    try:
+        from database import get_engine
+        eng = get_engine()
+        await eng.dispose()
+        logger.info("Database connections closed")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
 
 app = FastAPI(
     title="Medixpro API",
@@ -148,8 +170,21 @@ app.include_router(api_router, prefix="/api")
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for monitoring."""
-    return await get_health_status()
+    """Health check endpoint for monitoring - never requires authentication."""
+    try:
+        return await get_health_status()
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        # Always return a response even if health check fails
+        return {
+            "status": "unhealthy",
+            "database": "error",
+            "redis": "unknown",
+            "storage": "unknown",
+            "version": "1.0.0",
+            "environment": settings.environment,
+            "error": str(e)
+        }
 
 @app.get("/readiness")
 async def readiness_check():
@@ -159,7 +194,7 @@ async def readiness_check():
 
 @app.get("/liveness")
 async def liveness_check():
-    """Liveness check for Kubernetes/Railway."""
+    """Liveness check for Kubernetes/Railway - never requires authentication."""
     return {"alive": True}
 
 @app.get("/version")

@@ -47,24 +47,40 @@ async def get_health_status() -> Dict[str, Any]:
         "environment": settings.environment
     }
     
-    # Check database
-    db_healthy = await check_database_connection()
-    health_status["database"] = "connected" if db_healthy else "disconnected"
+    # Check database (with timeout to prevent hanging)
+    try:
+        import asyncio
+        db_healthy = await asyncio.wait_for(check_database_connection(), timeout=5.0)
+        health_status["database"] = "connected" if db_healthy else "disconnected"
+    except asyncio.TimeoutError:
+        logger.warning("Database connection check timed out")
+        health_status["database"] = "timeout"
+    except Exception as e:
+        logger.error(f"Database connection check error: {e}")
+        health_status["database"] = "error"
     
-    # Check Redis
-    redis_healthy = await check_redis_connection()
-    health_status["redis"] = "connected" if redis_healthy else "disconnected"
+    # Check Redis (optional - don't fail health check if missing)
+    try:
+        redis_healthy = await check_redis_connection()
+        health_status["redis"] = "connected" if redis_healthy else "disconnected"
+    except Exception as e:
+        logger.warning(f"Redis check failed (non-critical): {e}")
+        health_status["redis"] = "disconnected"
     
-    # Check Storage
-    storage_healthy = await check_storage_connection()
-    health_status["storage"] = "connected" if storage_healthy else "disconnected"
+    # Check Storage (optional - don't fail health check if missing)
+    try:
+        storage_healthy = await check_storage_connection()
+        health_status["storage"] = "connected" if storage_healthy else "disconnected"
+    except Exception as e:
+        logger.warning(f"Storage check failed (non-critical): {e}")
+        health_status["storage"] = "disconnected"
     
-    # Determine overall health
-    if not db_healthy:
+    # Determine overall health - only fail if database is down
+    if health_status["database"] not in ["connected"]:
         health_status["status"] = "unhealthy"
-    elif settings.environment == "production" and not redis_healthy:
+    elif settings.environment == "production" and health_status["redis"] == "disconnected":
         health_status["status"] = "degraded"
-    elif settings.environment == "production" and not storage_healthy:
+    elif settings.environment == "production" and health_status["storage"] == "disconnected":
         health_status["status"] = "degraded"
     
     return health_status
