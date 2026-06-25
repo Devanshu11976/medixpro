@@ -211,7 +211,7 @@ export function LoginForm() {
           </div>
           <div className="space-y-1">
             <Label htmlFor="regEmail">Email Address</Label>
-            <Input id="regEmail" type="email" placeholder="retailer@domain.com" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} />
+            <Input id="regEmail" type="email" placeholder="retailer@domain.com" autoCapitalize="none" autoCorrect="off" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} />
           </div>
           <div className="space-y-1">
             <Label htmlFor="regPhone">Mobile Number</Label>
@@ -273,6 +273,8 @@ export function LoginForm() {
               type="email"
               placeholder="you@company.com"
               autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
               className="pl-9"
               aria-invalid={!!errors.email}
               {...register("email")}
