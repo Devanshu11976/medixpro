@@ -61,7 +61,8 @@ async def lifespan(app: FastAPI):
         
     # Database seeding logic (optional - don't fail if it errors)
     try:
-        from database import get_engine, AsyncSessionLocal
+        from database import get_engine
+        import database
         from app.models.models import User
         from app.utils.security import get_password_hash
         from sqlalchemy.future import select
@@ -70,11 +71,10 @@ async def lifespan(app: FastAPI):
         eng = get_engine()
         
         # Ensure AsyncSessionLocal is initialized
-        global AsyncSessionLocal
-        if AsyncSessionLocal is None:
+        if database.AsyncSessionLocal is None:
             logger.warning("AsyncSessionLocal not initialized, skipping seeding")
         else:
-            async with AsyncSessionLocal() as session:
+            async with database.AsyncSessionLocal() as session:
                 # Check and seed Admin
                 admin_res = await session.execute(select(User).where(User.email == "admin@medixpro.com"))
                 admin = admin_res.scalar_one_or_none()
