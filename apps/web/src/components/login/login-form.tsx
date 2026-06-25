@@ -119,6 +119,17 @@ export function LoginForm() {
 
   const handleGoogleSsoClick = () => {
     setFormError(null);
+    
+    // Check if mobile device - use redirect instead of popup
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Mobile: Use redirect-based flow
+      window.location.href = "/login/google-sso";
+      return;
+    }
+    
+    // Desktop: Use popup-based flow
     const width = 500;
     const height = 600;
     const left = window.screen.width / 2 - width / 2;
@@ -223,7 +234,7 @@ export function LoginForm() {
           </div>
           <div className="space-y-1">
             <Label htmlFor="regPassword">Password</Label>
-            <Input id="regPassword" type="password" placeholder="••••••••" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} />
+            <Input id="regPassword" type="password" placeholder="••••••••" autoCapitalize="none" autoCorrect="off" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} />
           </div>
 
           {formError && (
@@ -294,6 +305,8 @@ export function LoginForm() {
               type={showPassword ? "text" : "password"}
               placeholder="••••••••"
               autoComplete="current-password"
+              autoCapitalize="none"
+              autoCorrect="off"
               className="pl-9 pr-10"
               aria-invalid={!!errors.password}
               {...register("password")}

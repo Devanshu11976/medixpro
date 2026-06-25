@@ -46,6 +46,7 @@ export default function GoogleSsoCallback() {
 
         // Send the data back to the parent window
         if (window.opener) {
+          // Desktop popup flow
           window.opener.postMessage(
             {
               type: "GOOGLE_SSO_SUCCESS",
@@ -61,7 +62,12 @@ export default function GoogleSsoCallback() {
             window.close();
           }, 500);
         } else {
-          // If no opener (opened in same tab), redirect to login
+          // Mobile redirect flow - store data and redirect
+          sessionStorage.setItem('google_sso_data', JSON.stringify({
+            email,
+            name,
+            token: accessToken
+          }));
           window.location.href = "/login";
         }
       } catch (err: any) {
