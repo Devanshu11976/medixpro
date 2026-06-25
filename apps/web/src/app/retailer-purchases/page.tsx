@@ -96,7 +96,7 @@ export default function RetailerPurchasesPage() {
       <main className="lg:ml-[260px]">
         <DashboardTopbar onMobileMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)} />
 
-        <div className="space-y-6 px-6 py-6 lg:px-8">
+        <div className="space-y-6 px-4 py-6 sm:px-6 lg:px-8">
           {/* Header */}
           <div>
             <h1 className="font-display text-2xl font-bold text-gray-900">My Purchase Ledger</h1>

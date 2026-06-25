@@ -168,7 +168,7 @@ export function LoginForm() {
 
   if (mode === "pending") {
     return (
-      <div className="rounded-lg border border-border bg-gradient-to-b from-white to-[#FBFEFE] p-6 pb-5 shadow-[0_16px_34px_-18px_rgba(14,63,76,0.35)] text-center animate-in fade-in">
+      <div className="rounded-lg border border-border bg-gradient-to-b from-white to-[#FBFEFE] p-4 sm:p-6 pb-5 shadow-[0_16px_34px_-18px_rgba(14,63,76,0.35)] text-center animate-in fade-in">
         <div className="mb-5 flex flex-col items-center">
           <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 border border-amber-200">
             <Clock className="h-6 w-6 text-amber-500 animate-pulse" />
@@ -192,7 +192,7 @@ export function LoginForm() {
 
   if (mode === "register") {
     return (
-      <div className="rounded-lg border border-border bg-gradient-to-b from-white to-[#FBFEFE] p-6 pb-5 shadow-[0_16px_34px_-18px_rgba(14,63,76,0.35)] animate-in fade-in">
+      <div className="rounded-lg border border-border bg-gradient-to-b from-white to-[#FBFEFE] p-4 sm:p-6 pb-5 shadow-[0_16px_34px_-18px_rgba(14,63,76,0.35)] animate-in fade-in">
         <div className="mb-5 flex flex-col items-center">
           <div className="mb-2.5 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#D7E6E4] to-[#B9CDCB] shadow-[inset_0_2px_4px_rgba(0,0,0,0.08)]">
             <User className="h-6 w-6 text-[#6E8A87]" strokeWidth={1.8} />
@@ -255,7 +255,7 @@ export function LoginForm() {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-gradient-to-b from-white to-[#FBFEFE] p-6 pb-5 shadow-[0_16px_34px_-18px_rgba(14,63,76,0.35)]">
+    <div className="rounded-lg border border-border bg-gradient-to-b from-white to-[#FBFEFE] p-4 sm:p-6 pb-5 shadow-[0_16px_34px_-18px_rgba(14,63,76,0.35)]">
       <div className="mb-5 flex flex-col items-center">
         <div className="mb-2.5 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#D7E6E4] to-[#B9CDCB] shadow-[inset_0_2px_4px_rgba(0,0,0,0.08),0_6px_14px_rgba(14,63,76,0.18)]">
           <User className="h-6 w-6 text-[#6E8A87]" strokeWidth={1.8} />
@@ -344,10 +344,10 @@ export function LoginForm() {
           variant="outline" 
           type="button" 
           onClick={handleGoogleSsoClick} 
-          className="w-full text-foreground cursor-pointer flex items-center justify-center gap-2 h-10 border-gray-200 hover:bg-gray-50"
+          className="w-full text-foreground cursor-pointer flex items-center justify-center gap-2 border-gray-200 hover:bg-gray-50 whitespace-normal py-2.5 h-auto text-center"
         >
-          <GoogleIcon className="h-4 w-4" />
-          Continue with Google (Retailer Only)
+          <GoogleIcon className="h-4 w-4 shrink-0" />
+          <span className="text-xs sm:text-sm font-semibold text-center leading-tight">Continue with Google (Retailer Only)</span>
         </Button>
       </div>
 

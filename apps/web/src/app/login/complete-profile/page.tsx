@@ -50,8 +50,8 @@ export default function CompleteProfilePage() {
 
   if (isPending) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-5 py-8">
-        <div className="w-full max-w-[460px] rounded-2xl bg-white border border-gray-100 p-8 shadow-xl text-center flex flex-col justify-between min-h-[400px]">
+      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-3 sm:px-5 py-8">
+        <div className="w-full max-w-[460px] rounded-2xl bg-white border border-gray-100 p-5 sm:p-8 shadow-xl text-center flex flex-col justify-between min-h-[400px]">
           <div className="mb-6 flex flex-col items-center">
             <div className="mb-3.5 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 border border-amber-200">
               <Clock className="h-6 w-6 text-amber-500 animate-pulse" />
@@ -77,8 +77,8 @@ export default function CompleteProfilePage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-5 py-8">
-      <div className="w-full max-w-[480px] rounded-2xl bg-white border border-gray-100 p-8 shadow-xl text-left">
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-3 sm:px-5 py-8">
+      <div className="w-full max-w-[480px] rounded-2xl bg-white border border-gray-100 p-5 sm:p-8 shadow-xl text-left">
         <div className="mb-6 flex flex-col items-start border-b border-gray-100 pb-4">
           <div className="mb-3.5 flex h-11 w-11 items-center justify-center rounded-full bg-blue-50 text-blue-600 shadow-xs">
             <User className="h-5 w-5" />

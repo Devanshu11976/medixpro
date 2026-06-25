@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-5 py-8">
+    <main className="flex min-h-screen items-center justify-center bg-background px-3 sm:px-5 py-8">
       <div className="grid w-full max-w-[1180px] overflow-hidden rounded-[22px] bg-card shadow-[0_1px_1px_rgba(14,63,76,0.04),0_8px_24px_rgba(14,63,76,0.10),0_30px_60px_-20px_rgba(14,63,76,0.28)] md:grid-cols-[1.05fr_1fr]">
         {/* Left: illustrated scene - hidden on mobile */}
         <div className="relative hidden md:flex min-h-[660px] flex-col justify-between bg-[linear-gradient(160deg,#0E3F4C_0%,#136D7F_58%,#1A8B96_100%)] p-7 pb-7">
@@ -49,7 +49,7 @@ export default function LoginPage() {
         </div>
 
         {/* Right: login form */}
-        <div className="flex flex-col p-6 pb-5 md:p-10 md:pb-8">
+        <div className="flex flex-col p-4 sm:p-6 pb-5 md:p-10 md:pb-8">
           <div className="mb-4 flex justify-end">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-teal-mid/20 bg-brand-mint px-3 py-1.5 text-xs font-semibold text-brand-teal-mid">
               <ShieldCheck className="h-3.5 w-3.5" />
