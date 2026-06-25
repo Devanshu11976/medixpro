@@ -1,7 +1,6 @@
 // API service layer with interceptors and automatic token refresh
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { API_BASE_URL } from './config';
 
 class ApiService {
   private client: AxiosInstance;
@@ -9,7 +8,7 @@ class ApiService {
 
   constructor() {
     this.client = axios.create({
-      baseURL: `${API_URL}/api`,
+      baseURL: `${API_BASE_URL}/api`,
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
@@ -81,7 +80,7 @@ class ApiService {
           throw new Error('No refresh token available');
         }
 
-        const response = await axios.post(`${API_URL}/api/auth/refresh`, {
+        const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
           refresh_token: refreshToken,
         });
 
