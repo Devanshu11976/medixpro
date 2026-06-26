@@ -28,6 +28,7 @@ class TokenResponse(BaseModel):
     email: str
     name: str
     profile_complete: Optional[bool] = None
+    retailer_id: Optional[str] = None
 
 class RetailerRegisterRequest(BaseModel):
     email: EmailStr

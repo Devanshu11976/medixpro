@@ -14,6 +14,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import api from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 type CartItem = {
   id: string;
@@ -33,10 +35,13 @@ const MEDICINES_POOL = [
 ];
 
 export default function RetailerCartPage() {
+  const { user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [success, setSuccess] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -82,36 +87,69 @@ export default function RetailerCartPage() {
     saveCartState(cart.filter((item) => item.id !== id));
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (cart.length === 0) return;
+    if (!user || !user.retailer_id) {
+      setError("Unable to place order. Retailer profile not found in your session.");
+      return;
+    }
 
+    setIsSubmitting(true);
+    setError(null);
     const ordId = `ORD-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const itemsDescription = cart.map((c) => `${c.name} (x${c.qty})`).join(", ");
 
-    const orderData = {
-      orderId: ordId,
-      medicines: itemsDescription,
-      amount: `$${grandTotal.toFixed(2)}`,
-      status: "Pending",
-      date: new Date().toISOString().split("T")[0],
+    const orderPayload = {
+      id: ordId,
+      retailer_id: user.retailer_id,
+      items: cart.map((c) => ({
+        medicine_id: c.id,
+        quantity: c.qty,
+        price: c.price,
+      })),
+      total_amount: grandTotal,
     };
 
-    // Load purchases from localstorage
-    const storedPurchases = localStorage.getItem("medixpro_purchases");
-    let purchases = [];
-    if (storedPurchases) {
-      try {
-        purchases = JSON.parse(storedPurchases);
-      } catch {}
-    }
-    purchases = [orderData, ...purchases];
-    localStorage.setItem("medixpro_purchases", JSON.stringify(purchases));
+    try {
+      // 1. Submit to API database
+      await api.post("/api/orders", orderPayload);
 
-    // Clear cart
-    localStorage.removeItem("medixpro_cart");
-    setPlacedOrderId(ordId);
-    setSuccess(true);
-    setCart([]);
+      // 2. Also keep local storage ledger in sync
+      const orderData = {
+        orderId: ordId,
+        medicines: itemsDescription,
+        amount: `$${grandTotal.toFixed(2)}`,
+        status: "Pending",
+        date: new Date().toISOString().split("T")[0],
+      };
+
+      const storedPurchases = localStorage.getItem("medixpro_purchases");
+      let purchases = [];
+      if (storedPurchases) {
+        try {
+          purchases = JSON.parse(storedPurchases);
+        } catch {}
+      }
+      purchases = [orderData, ...purchases];
+      localStorage.setItem("medixpro_purchases", JSON.stringify(purchases));
+
+      // 3. Clear cart and set success states
+      localStorage.removeItem("medixpro_cart");
+      setPlacedOrderId(ordId);
+      setSuccess(true);
+      setCart([]);
+    } catch (err: any) {
+      console.error("Order placement failed:", err);
+      let errMsg = "Failed to place order. Please try again.";
+      if (err.response?.data?.detail) {
+        errMsg = err.response.data.detail;
+      } else if (err.message) {
+        errMsg = err.message;
+      }
+      setError(errMsg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Calculations
@@ -132,6 +170,12 @@ export default function RetailerCartPage() {
             <h1 className="font-display text-2xl font-bold text-gray-900">Retailer Cart Checkout</h1>
             <p className="mt-1 text-sm text-gray-500">Confirm purchase quantities, view wholesale discount margins, and checkout.</p>
           </div>
+
+          {error && (
+            <div className="rounded-xl border border-red-250 bg-red-50 p-4 text-sm text-red-600 font-medium">
+              {error}
+            </div>
+          )}
 
           {success ? (
             <div className="max-w-md rounded-2xl border border-green-200 bg-white p-8 shadow-sm text-center space-y-4">
@@ -258,9 +302,10 @@ export default function RetailerCartPage() {
 
                   <Button
                     onClick={handlePlaceOrder}
-                    className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                    disabled={isSubmitting}
+                    className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-50"
                   >
-                    Confirm & Place Purchase Order
+                    {isSubmitting ? "Placing Order..." : "Confirm & Place Purchase Order"}
                   </Button>
                 </div>
               )}

@@ -197,6 +197,14 @@ async def login(payload: schemas.LoginRequest, db: AsyncSession = Depends(get_db
     db.add(audit)
     await db.commit()
 
+    # We should query retailer details:
+    retailer_id = None
+    if user.role == "RETAILER":
+        ret_res = await db.execute(select(models.Retailer).where(models.Retailer.user_id == user.id))
+        retailer = ret_res.scalar_one_or_none()
+        if retailer:
+            retailer_id = retailer.id
+
     return {
         "access_token": access,
         "refresh_token": refresh,
@@ -204,7 +212,8 @@ async def login(payload: schemas.LoginRequest, db: AsyncSession = Depends(get_db
         "status": user.status,
         "email": user.email,
         "name": user.name,
-        "profile_complete": True
+        "profile_complete": True,
+        "retailer_id": retailer_id
     }
 
 @router.post("/auth/google", response_model=schemas.TokenResponse)
@@ -261,6 +270,13 @@ async def google_auth(payload: schemas.GoogleAuthPayload, db: AsyncSession = Dep
     access = create_access_token(user.id)
     refresh = create_refresh_token(user.id)
 
+    retailer_id = None
+    if not first_time:
+        ret_res = await db.execute(select(models.Retailer).where(models.Retailer.user_id == user.id))
+        retailer = ret_res.scalar_one_or_none()
+        if retailer:
+            retailer_id = retailer.id
+
     # Put a flag in token payload or response metadata to tell frontend if profile is complete
     return {
         "access_token": access,
@@ -269,7 +285,8 @@ async def google_auth(payload: schemas.GoogleAuthPayload, db: AsyncSession = Dep
         "status": "PENDING" if first_time else user.status,
         "email": user.email,
         "name": user.name,
-        "profile_complete": not first_time
+        "profile_complete": not first_time,
+        "retailer_id": retailer_id
     }
 
 @router.post("/auth/complete-profile")
@@ -317,7 +334,7 @@ async def complete_profile(
     db.add(audit)
     await db.commit()
     
-    return {"status": "success", "message": "Profile complete, awaiting approval"}
+    return {"status": "success", "message": "Profile complete, awaiting approval", "retailer_id": retailer.id}
 
 @router.post("/auth/refresh", response_model=schemas.TokenResponse)
 async def refresh(payload: schemas.TokenRefreshRequest, db: AsyncSession = Depends(get_db)):
@@ -339,11 +356,14 @@ async def refresh(payload: schemas.TokenRefreshRequest, db: AsyncSession = Depen
         new_refresh = create_refresh_token(user.id)
         
         profile_complete = True
+        retailer_id = None
         if user.role == "RETAILER":
             ret_res = await db.execute(select(models.Retailer).where(models.Retailer.user_id == user.id))
             retailer = ret_res.scalar_one_or_none()
             if not retailer:
                 profile_complete = False
+            else:
+                retailer_id = retailer.id
         
         return {
             "access_token": access,
@@ -352,7 +372,8 @@ async def refresh(payload: schemas.TokenRefreshRequest, db: AsyncSession = Depen
             "status": user.status,
             "email": user.email,
             "name": user.name,
-            "profile_complete": profile_complete
+            "profile_complete": profile_complete,
+            "retailer_id": retailer_id
         }
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
@@ -360,11 +381,14 @@ async def refresh(payload: schemas.TokenRefreshRequest, db: AsyncSession = Depen
 @router.get("/auth/me")
 async def get_me(current_user: models.User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     profile_complete = True
+    retailer_id = None
     if current_user.role == "RETAILER":
         ret_res = await db.execute(select(models.Retailer).where(models.Retailer.user_id == current_user.id))
         retailer = ret_res.scalar_one_or_none()
         if not retailer:
             profile_complete = False
+        else:
+            retailer_id = retailer.id
 
     return {
         "id": current_user.id,
@@ -374,7 +398,8 @@ async def get_me(current_user: models.User = Depends(get_current_user), db: Asyn
         "status": current_user.status,
         "auth_provider": current_user.auth_provider,
         "created_at": current_user.created_at,
-        "profile_complete": profile_complete
+        "profile_complete": profile_complete,
+        "retailer_id": retailer_id
     }
 
 # ----------------- MEDICINE ENDPOINTS -----------------

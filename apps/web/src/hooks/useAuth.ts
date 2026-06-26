@@ -11,6 +11,7 @@ export interface UserSession {
   status: "ACTIVE" | "PENDING" | "DISABLED";
   profile_complete?: boolean;
   token?: string;
+  retailer_id?: string;
 }
 
 export function useAuth() {
@@ -32,12 +33,13 @@ export function useAuth() {
         // Background verify session
         api.get("/api/auth/me")
           .then((res) => {
-            const freshUser = {
+            const freshUser: UserSession = {
               email: res.data.email,
               name: res.data.name,
               role: res.data.role,
               status: res.data.status,
-              profile_complete: res.data.profile_complete
+              profile_complete: res.data.profile_complete,
+              retailer_id: res.data.retailer_id
             };
             setUser(freshUser);
             localStorage.setItem("medixpro_user", JSON.stringify(freshUser));
@@ -59,12 +61,12 @@ export function useAuth() {
     setLoading(true);
     try {
       const response = await api.post("/api/auth/login", { email, password });
-      const { access_token, refresh_token, role, status, name, profile_complete } = response.data;
+      const { access_token, refresh_token, role, status, name, profile_complete, retailer_id } = response.data;
       
       localStorage.setItem("medixpro_access_token", access_token);
       localStorage.setItem("medixpro_refresh_token", refresh_token);
       
-      const session: UserSession = { email, name, role, status, profile_complete: profile_complete !== false };
+      const session: UserSession = { email, name, role, status, profile_complete: profile_complete !== false, retailer_id };
       localStorage.setItem("medixpro_user", JSON.stringify(session));
       localStorage.setItem("medixpro_role", role);
       
@@ -88,12 +90,12 @@ export function useAuth() {
     setLoading(true);
     try {
       const response = await api.post("/api/auth/google", { email, name, google_token: googleToken });
-      const { access_token, refresh_token, role, status, profile_complete } = response.data;
+      const { access_token, refresh_token, role, status, profile_complete, retailer_id, name: responseName } = response.data;
       
       localStorage.setItem("medixpro_access_token", access_token);
       localStorage.setItem("medixpro_refresh_token", refresh_token);
       
-      const session: UserSession = { email, name, role, status, profile_complete };
+      const session: UserSession = { email, name: responseName || name, role, status, profile_complete, retailer_id };
       localStorage.setItem("medixpro_user", JSON.stringify(session));
       localStorage.setItem("medixpro_role", role);
       
@@ -117,16 +119,17 @@ export function useAuth() {
   const completeProfile = async (shopName: string, ownerName: string, phone: string, address: string) => {
     setLoading(true);
     try {
-      await api.post("/api/auth/complete-profile", {
+      const response = await api.post("/api/auth/complete-profile", {
         shop_name: shopName,
         owner_name: ownerName,
         phone,
         address
       });
+      const { retailer_id } = response.data;
       
       // Update local status to PENDING
       if (user) {
-        const updated = { ...user, status: "PENDING" as const, profile_complete: true };
+        const updated = { ...user, status: "PENDING" as const, profile_complete: true, retailer_id };
         setUser(updated);
         localStorage.setItem("medixpro_user", JSON.stringify(updated));
       }

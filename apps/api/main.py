@@ -106,6 +106,22 @@ async def lifespan(app: FastAPI):
                     )
                     session.add(worker)
                     logger.info("Worker user seeded")
+                
+                # Check and seed Medicines
+                from app.models.models import Medicine
+                for med_data in [
+                    {"id": "MED-001", "name": "Paracetamol 500mg", "generic_name": "Acetaminophen", "sku": "PRC-500-100", "price": 5.0, "stock": 1200, "expiry_date": "2026-12-15", "rack_location": "Rack A - Shelf 2"},
+                    {"id": "MED-002", "name": "Amoxicillin 250mg", "generic_name": "Amoxicillin Trihydrate", "sku": "AMX-250-50", "price": 12.5, "stock": 45, "expiry_date": "2026-08-20", "rack_location": "Rack B - Shelf 1"},
+                    {"id": "MED-003", "name": "Omeprazole 20mg", "generic_name": "Omeprazole", "sku": "OMP-20-30", "price": 8.2, "stock": 850, "expiry_date": "2027-02-10", "rack_location": "Rack C - Shelf 4"},
+                    {"id": "MED-004", "name": "Metformin 500mg", "generic_name": "Metformin Hydrochloride", "sku": "MTF-500-100", "price": 6.0, "stock": 0, "expiry_date": "2025-11-30", "rack_location": "Rack A - Shelf 1"},
+                    {"id": "MED-005", "name": "Ibuprofen 400mg", "generic_name": "Ibuprofen", "sku": "IBU-400-60", "price": 4.8, "stock": 15, "expiry_date": "2026-06-15", "rack_location": "Rack B - Shelf 3"},
+                    {"id": "MED-006", "name": "Cetirizine 10mg", "generic_name": "Cetirizine Dihydrochloride", "sku": "CTR-10-100", "price": 3.5, "stock": 1400, "expiry_date": "2027-05-18", "rack_location": "Rack D - Shelf 2"},
+                ]:
+                    med_res = await session.execute(select(Medicine).where(Medicine.id == med_data["id"]))
+                    if not med_res.scalar_one_or_none():
+                        med = Medicine(**med_data)
+                        session.add(med)
+                        logger.info(f"Medicine {med_data['name']} seeded")
                     
                 await session.commit()
     except Exception as e:
