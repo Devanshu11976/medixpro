@@ -62,44 +62,18 @@ export function DashboardTopbar({ onMobileMenuToggle }: DashboardTopbarProps) {
       
       const readIds = JSON.parse(localStorage.getItem("medixpro_read_ids") || "[]");
       
-      const base = [
-        {
-          id: "NTF-001",
-          title: "Critical Low Stock Alert",
-          description: "Insulin Glargine is currently at 15 units.",
-          unread: !readIds.includes("NTF-001"),
-        },
-        {
-          id: "NTF-002",
-          title: "Medicines Expiring Soon",
-          description: "Prednisone 5mg will expire in 20 days.",
-          unread: !readIds.includes("NTF-002"),
-        },
-        {
-          id: "NTF-003",
-          title: "New Retailer Purchase Order",
-          description: "Medicare Pharmacy placed order ORD-2024-0847.",
-          unread: !readIds.includes("NTF-003"),
-        },
-      ];
-
-      api.get("/api/admin/retailers/pending")
+      api.get("/api/notifications")
         .then((res) => {
           if (Array.isArray(res.data)) {
-            const pending = res.data.map((r: any) => ({
-              id: `PEND-${r.id}`,
-              title: "Pending Retailer Registration",
-              description: `Pharmacy "${r.name}" awaits approval.`,
-              unread: !readIds.includes(`PEND-${r.id}`),
+            const formatted = res.data.map((n: any) => ({
+              ...n,
+              unread: !readIds.includes(n.id)
             }));
-            setNotifications([...pending, ...base]);
-          } else {
-            setNotifications(base);
+            setNotifications(formatted);
           }
         })
         .catch((err) => {
-          console.error("Failed to load pending in topbar: ", err);
-          setNotifications(base);
+          console.error("Failed to load dynamic notifications in topbar: ", err);
         });
     }
   };

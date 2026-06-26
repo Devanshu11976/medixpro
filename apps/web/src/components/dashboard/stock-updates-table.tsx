@@ -31,7 +31,7 @@ export function StockUpdatesTable() {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[700px] text-left text-sm">
+        <table className="w-full text-left text-sm" style={{ minWidth: "700px" }}>
           <thead>
             <tr className="border-b border-gray-200 text-xs font-semibold text-gray-500">
               <th className="py-3 pr-4">Medicine</th>

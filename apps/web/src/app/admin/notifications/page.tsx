@@ -69,46 +69,24 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
 
 export default function NotificationsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     if (!localStorage.getItem("medixpro_access_token")) return;
     const readIds = JSON.parse(localStorage.getItem("medixpro_read_ids") || "[]");
 
-    api.get("/api/admin/retailers/pending")
+    api.get("/api/notifications")
       .then((res) => {
         if (Array.isArray(res.data)) {
-          const pendingNotifications: Notification[] = res.data.map((r: any) => {
-            const id = `PEND-${r.id}`;
-            return {
-              id,
-              title: "Pending Retailer Registration",
-              description: `Pharmacy "${r.name}" (Pharmacist: ${r.contact_person}) has requested partner authorization.`,
-              type: "order" as const,
-              time: "Awaiting Action",
-              unread: !readIds.includes(id),
-            };
-          });
-          setNotifications((prev) => {
-            const cleanPrev = prev.filter(n => !n.id.startsWith("PEND-")).map(n => ({
-              ...n,
-              unread: readIds.includes(n.id) ? false : n.unread
-            }));
-            return [...pendingNotifications, ...cleanPrev];
-          });
-        } else {
-          setNotifications((prev) => prev.map(n => ({
+          const formatted = res.data.map((n: any) => ({
             ...n,
-            unread: readIds.includes(n.id) ? false : n.unread
-          })));
+            unread: !readIds.includes(n.id)
+          }));
+          setNotifications(formatted);
         }
       })
       .catch((err) => {
-        console.error("Failed to load pending retailers in notifications: ", err);
-        setNotifications((prev) => prev.map(n => ({
-          ...n,
-          unread: readIds.includes(n.id) ? false : n.unread
-        })));
+        console.error("Failed to load dynamic notifications: ", err);
       });
   }, []);
 

@@ -154,3 +154,16 @@ class ActivityLogResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# Invoice sync schemas
+class InvoiceItemSync(BaseModel):
+    name: str
+    qty: int
+    price: float
+    batch: str
+
+class InvoiceSyncPayload(BaseModel):
+    supplier_name: str
+    amount: float
+    items: List[InvoiceItemSync]
+

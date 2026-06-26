@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { Button } from "@/components/ui/button";
+import api from "@/lib/api";
 import {
   FileText,
   Upload,
@@ -31,60 +32,100 @@ const INITIAL_INVOICES: Invoice[] = [
 
 export default function InvoicesPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<"idle" | "uploading" | "scanning" | "extracted" | "synced">("idle");
   const [fileName, setFileName] = useState("");
+  const [supplierName, setSupplierName] = useState("");
+  const [amount, setAmount] = useState(0);
 
   // Extracted item mocks from OCR
-  const [extractedItems, setExtractedItems] = useState<Array<{ name: string; qty: number; price: string; batch: string }>>([]);
+  const [extractedItems, setExtractedItems] = useState<Array<{ name: string; qty: number; price: number; batch: string }>>([]);
 
-  const handleSimulatedUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const fetchInvoices = () => {
+    api.get("/api/invoices")
+      .then((res) => {
+        const formatted = res.data.map((inv: any) => ({
+          id: inv.id,
+          supplierName: inv.supplier_name,
+          amount: `$${inv.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+          uploadedDate: inv.uploaded_at.split("T")[0],
+          status: inv.status,
+          itemsCount: 0
+        }));
+        setInvoices(formatted);
+      })
+      .catch((err) => console.error("Failed to fetch invoices:", err));
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+  }, []);
+
+  const handleRealUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
     setFileName(file.name);
     setStep("uploading");
-    setTimeout(() => {
-      setStep("scanning");
-      simulateOCR();
-    }, 1200);
-  };
+    
+    const formData = new FormData();
+    formData.append("file", file);
 
-  const simulateOCR = () => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      // Simulate PaddleOCR/Groq OCR extraction
+    try {
+      setStep("scanning");
+      setIsProcessing(true);
+      
+      const response = await api.post("/api/invoices/ocr", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const { supplier_name, amount, items } = response.data;
+      setSupplierName(supplier_name);
+      setAmount(amount);
+      setExtractedItems(items);
+      setStep("extracted");
+    } catch (error) {
+      console.error("Failed to parse invoice:", error);
+      alert("Failed to parse the uploaded invoice. Using local mock/fallback.");
+      // Fallback
+      setSupplierName("PharmaCorp Ltd");
+      setAmount(25000.0);
       setExtractedItems([
-        { name: "Paracetamol 500mg", qty: 2500, price: "$2.50", batch: "BTH-2026-0902" },
-        { name: "Amoxicillin 250mg", qty: 1200, price: "$8.00", batch: "BTH-2026-0903" },
-        { name: "Omeprazole 20mg", qty: 800, price: "$4.10", batch: "BTH-2026-0904" },
+        { name: "Paracetamol 500mg", qty: 2500, price: 2.50, batch: "BTH-2026-0902" },
+        { name: "Amoxicillin 250mg", qty: 1200, price: 8.00, batch: "BTH-2026-0903" },
       ]);
       setStep("extracted");
+    } finally {
       setIsProcessing(false);
-    }, 2800); // OCR scan duration
+    }
   };
 
-  const handleApproveSync = () => {
+  const handleApproveSync = async () => {
     if (extractedItems.length === 0) return;
 
-    // Add new invoice to invoices list
-    const newInv: Invoice = {
-      id: `INV-2026-0${343 + invoices.length}`,
-      supplierName: "OCR Upload (PharmaCorp)",
-      amount: "$17,380.00",
-      uploadedDate: new Date().toISOString().split("T")[0],
-      status: "Approved",
-      itemsCount: extractedItems.length,
-    };
+    try {
+      setStep("uploading"); // Show loader
+      await api.post("/api/invoices/sync", {
+        supplier_name: supplierName,
+        amount: amount,
+        items: extractedItems,
+      });
 
-    setInvoices([newInv, ...invoices]);
-    setStep("synced");
-
-    setTimeout(() => {
-      setStep("idle");
-      setFileName("");
-      setExtractedItems([]);
-    }, 2000);
+      setStep("synced");
+      fetchInvoices(); // Refresh invoices list
+      
+      setTimeout(() => {
+        setStep("idle");
+        setFileName("");
+        setExtractedItems([]);
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to sync invoice:", error);
+      alert("Failed to sync invoice with database.");
+      setStep("extracted");
+    }
   };
 
   return (
@@ -123,7 +164,7 @@ export default function InvoicesPage() {
                     <input
                       type="file"
                       accept=".pdf,.png,.jpg,.jpeg"
-                      onChange={handleSimulatedUpload}
+                      onChange={handleRealUpload}
                       className="hidden"
                     />
                   </label>
@@ -180,7 +221,9 @@ export default function InvoicesPage() {
                               <td className="py-2.5 px-3 font-semibold text-gray-900">{item.name}</td>
                               <td className="py-2.5 px-3 font-mono text-gray-500">{item.batch}</td>
                               <td className="py-2.5 px-3 font-bold text-gray-900">{item.qty.toLocaleString()} units</td>
-                              <td className="py-2.5 px-3 font-medium text-gray-700">{item.price}</td>
+                              <td className="py-2.5 px-3 font-medium text-gray-700">
+                                {typeof item.price === "number" ? `$${item.price.toFixed(2)}` : item.price}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

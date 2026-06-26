@@ -106,7 +106,7 @@ export default function RetailerPurchasesPage() {
           {/* Ledger Table */}
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm max-w-5xl">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-sm text-gray-500">
+              <table className="w-full border-collapse text-left text-sm text-gray-500" style={{ minWidth: "750px" }}>
                 <thead className="border-b border-gray-200 bg-gray-50 text-xs font-bold uppercase text-gray-700">
                   <tr>
                     <th className="px-6 py-4">Order ID</th>

@@ -24,10 +24,10 @@ export function PendingInvoicesWidget() {
         {pendingInvoices.map((invoice, index) => (
           <div
             key={index}
-            className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 p-3 hover:bg-gray-100 transition-colors"
+            className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-gray-100 bg-gray-50 p-3 hover:bg-gray-100 transition-colors"
           >
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-medium text-gray-900">{invoice.invoiceId}</p>
                 <span
                   className={cn(
@@ -40,13 +40,13 @@ export function PendingInvoicesWidget() {
                   {invoice.status}
                 </span>
               </div>
-              <div className="mt-1 flex items-center gap-3 text-xs text-gray-500">
-                <span>{invoice.supplier}</span>
-                <span className="font-medium text-gray-900">{invoice.amount}</span>
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                <span className="font-medium text-gray-700">{invoice.supplier}</span>
+                <span className="font-semibold text-gray-900">{invoice.amount}</span>
                 <span>{invoice.uploadedDate}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0 justify-end">
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
                 <Eye className="h-4 w-4 text-gray-500" />
               </Button>

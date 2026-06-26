@@ -13,3 +13,5 @@ pyjwt
 supabase
 tenacity
 python-json-logger
+pypdf
+
