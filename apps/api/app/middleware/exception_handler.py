@@ -40,10 +40,20 @@ class ConflictException(APIException):
     def __init__(self, message: str = "Resource conflict", details: dict = None):
         super().__init__(message, status_code=409, details=details)
 
+def _add_cors_headers(request: Request, response: JSONResponse) -> JSONResponse:
+    """Attach CORS headers to exception responses to prevent browser masking."""
+    origin = request.headers.get("origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
 async def api_exception_handler(request: Request, exc: APIException) -> JSONResponse:
     """Handle custom API exceptions."""
     logger.error(f"API Exception: {exc.message} - Path: {request.url.path}")
-    return JSONResponse(
+    response = JSONResponse(
         status_code=exc.status_code,
         content={
             "success": False,
@@ -52,6 +62,7 @@ async def api_exception_handler(request: Request, exc: APIException) -> JSONResp
             "errors": [exc.details] if exc.details else []
         }
     )
+    return _add_cors_headers(request, response)
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Handle request validation errors."""
@@ -64,7 +75,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         })
     
     logger.warning(f"Validation error: {errors} - Path: {request.url.path}")
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "success": False,
@@ -73,11 +84,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "errors": errors
         }
     )
+    return _add_cors_headers(request, response)
 
 async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
     """Handle database errors."""
     logger.error(f"Database error: {str(exc)} - Path: {request.url.path}")
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "success": False,
@@ -86,11 +98,12 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError) -
             "errors": [{"detail": "An internal database error occurred"}]
         }
     )
+    return _add_cors_headers(request, response)
 
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle all other exceptions."""
     logger.error(f"Unhandled exception: {str(exc)} - Path: {request.url.path}", exc_info=True)
-    return JSONResponse(
+    response = JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "success": False,
@@ -99,3 +112,4 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
             "errors": [{"detail": "An unexpected error occurred"}]
         }
     )
+    return _add_cors_headers(request, response)

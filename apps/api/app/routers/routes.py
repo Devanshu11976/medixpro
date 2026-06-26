@@ -681,7 +681,15 @@ async def create_order(payload: schemas.OrderCreate, db: AsyncSession = Depends(
     )
     db.add(audit)
     await db.commit()
-    await db.refresh(order)
+    
+    # Fetch the order with its items to avoid lazy loading issues during serialization
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(models.Order)
+        .where(models.Order.id == payload.id)
+        .options(selectinload(models.Order.items))
+    )
+    order = result.scalar_one()
     return order
 
 # ----------------- INVOICE / OCR ENDPOINTS -----------------
