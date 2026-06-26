@@ -552,10 +552,66 @@ async def toggle_retailer_status(
     return {"status": "success", "message": f"Retailer status changed to {new_status}"}
 
 # ----------------- ORDER ENDPOINTS -----------------
-@router.get("/orders", response_model=List[schemas.OrderResponse])
+@router.get("/orders", response_model=List[schemas.OrderDetailsResponse])
 async def get_orders(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(models.Order))
-    return result.scalars().all()
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(models.Order)
+        .options(
+            selectinload(models.Order.retailer),
+            selectinload(models.Order.items).selectinload(models.OrderItem.medicine)
+        )
+    )
+    orders = result.scalars().all()
+    
+    response = []
+    for order in orders:
+        items_details = []
+        for item in order.items:
+            items_details.append({
+                "medicine_id": item.medicine_id,
+                "medicine_name": item.medicine.name if item.medicine else "Unknown Medicine",
+                "quantity": item.quantity,
+                "price": item.price
+            })
+        response.append({
+            "id": order.id,
+            "retailer_id": order.retailer_id,
+            "retailer_name": order.retailer.name if order.retailer else "Unknown Retailer",
+            "total_amount": order.total_amount,
+            "status": order.status,
+            "created_at": order.created_at,
+            "items": items_details
+        })
+    return response
+
+@router.put("/orders/{order_id}/status")
+async def update_order_status(
+    order_id: str,
+    payload: schemas.OrderStatusUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(models.Order).where(models.Order.id == order_id))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    valid_statuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"]
+    if payload.status not in valid_statuses:
+        raise HTTPException(status_code=400, detail="Invalid status value")
+        
+    order.status = payload.status
+    db.add(order)
+    
+    audit = models.ActivityLog(
+        actor="Admin",
+        category="Orders",
+        details=f"Order {order_id} status updated to {payload.status}.",
+        ip="127.0.0.1"
+    )
+    db.add(audit)
+    await db.commit()
+    return {"status": "success", "message": f"Order status updated to {payload.status}"}
 
 @router.post("/orders", response_model=schemas.OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(payload: schemas.OrderCreate, db: AsyncSession = Depends(get_db)):

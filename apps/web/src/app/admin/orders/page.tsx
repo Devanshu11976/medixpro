@@ -5,6 +5,7 @@ import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { DashboardTopbar } from "@/components/dashboard/topbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import api from "@/lib/api";
 import {
   Search,
   ShoppingCart,
@@ -14,6 +15,7 @@ import {
   XCircle,
   Eye,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 
 type Order = {
@@ -83,12 +85,47 @@ const INITIAL_ORDERS: Order[] = [
 
 export default function OrdersPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<Order["status"] | "All">("All");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("/api/orders");
+      const formatted = res.data.map((order: any) => ({
+        id: order.id,
+        retailer: order.retailer_name,
+        status: order.status,
+        amount: `$${order.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        date: order.created_at.split("T")[0],
+        items: order.items.map((item: any) => ({
+          name: item.medicine_name,
+          qty: item.quantity,
+          price: `$${item.price.toFixed(2)}`
+        }))
+      }));
+      setOrders(formatted);
+      
+      // Update selected order details dynamically
+      if (selectedOrder) {
+        const freshSelected = formatted.find((o: any) => o.id === selectedOrder.id);
+        if (freshSelected) {
+          setSelectedOrder(freshSelected);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
+    fetchOrders();
+    
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const query = params.get("search");
@@ -96,12 +133,21 @@ export default function OrdersPage() {
     }
   }, []);
 
-  const handleStatusChange = (orderId: string, nextStatus: Order["status"]) => {
-    setOrders(
-      orders.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o))
-    );
-    if (selectedOrder?.id === orderId) {
-      setSelectedOrder({ ...selectedOrder, status: nextStatus });
+  const handleStatusChange = async (orderId: string, nextStatus: Order["status"]) => {
+    try {
+      await api.put(`/api/orders/${orderId}/status`, { status: nextStatus });
+      
+      // Optimistic status update in UI
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: nextStatus } : o));
+      if (selectedOrder?.id === orderId) {
+        setSelectedOrder(prev => prev ? { ...prev, status: nextStatus } : null);
+      }
+      
+      // Reload in background
+      fetchOrders();
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      alert("Failed to update order status.");
     }
   };
 
@@ -207,7 +253,16 @@ export default function OrdersPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {filteredOrders.length > 0 ? (
+                      {loading && filteredOrders.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-12 text-center text-gray-400">
+                            <div className="flex justify-center items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                              Loading orders...
+                            </div>
+                          </td>
+                        </tr>
+                      ) : filteredOrders.length > 0 ? (
                         filteredOrders.map((order) => (
                           <tr
                             key={order.id}

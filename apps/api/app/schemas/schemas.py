@@ -167,3 +167,24 @@ class InvoiceSyncPayload(BaseModel):
     amount: float
     items: List[InvoiceItemSync]
 
+class OrderStatusUpdate(BaseModel):
+    status: str
+
+class OrderItemDetails(BaseModel):
+    medicine_id: str
+    medicine_name: str
+    quantity: int
+    price: float
+
+class OrderDetailsResponse(BaseModel):
+    id: str
+    retailer_id: str
+    retailer_name: str
+    total_amount: float
+    status: str
+    created_at: datetime.datetime
+    items: List[OrderItemDetails]
+
+    class Config:
+        from_attributes = True
+
