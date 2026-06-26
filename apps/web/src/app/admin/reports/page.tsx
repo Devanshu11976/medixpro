@@ -161,7 +161,7 @@ export default function ReportsPage() {
                     <BarChart data={topSellingMedicines} layout="vertical">
                       <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(val) => `$${val / 1000}k`} />
                       <YAxis type="category" dataKey="name" tickLine={false} axisLine={false} tickMargin={8} width={130} tick={{ fontSize: 10, fontWeight: 600 }} />
-                      <Tooltip formatter={(value) => value ? `$${Number(value).toLocaleString()}` : ""} />
+                      <Tooltip cursor={false} formatter={(value) => value ? `$${Number(value).toLocaleString()}` : ""} />
                       <Bar name="Sales Value" dataKey="revenue" fill="#8b5cf6" radius={[0, 6, 6, 0]} maxBarSize={28} />
                     </BarChart>
                   </ResponsiveContainer>

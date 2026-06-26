@@ -31,6 +31,7 @@ export function TotalSalesOverviewCard() {
               tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`}
             />
             <Tooltip
+              cursor={false}
               contentStyle={{
                 backgroundColor: "#1f2937",
                 border: "none",
