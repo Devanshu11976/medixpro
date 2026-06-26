@@ -54,27 +54,33 @@ export function DashboardSidebar({ isMobileOpen = false, onClose }: DashboardSid
 
         const updateCounts = () => {
           const readIds = JSON.parse(localStorage.getItem("medixpro_read_ids") || "[]");
-          const initialUnread = ["NTF-001", "NTF-002", "NTF-003"].filter(id => !readIds.includes(id)).length;
 
-          if (userRole === "admin" && localStorage.getItem("medixpro_access_token")) {
-            api.get("/api/admin/retailers/pending")
+          if (localStorage.getItem("medixpro_access_token")) {
+            if (userRole === "admin") {
+              api.get("/api/admin/retailers/pending")
+                .then((res) => {
+                  if (Array.isArray(res.data)) {
+                    setPendingCount(res.data.length);
+                  }
+                })
+                .catch((err) => console.error("Failed to load pending retailers count: ", err));
+            }
+
+            api.get("/api/notifications")
               .then((res) => {
                 if (Array.isArray(res.data)) {
-                  const pending = res.data.length;
-                  setPendingCount(pending);
-                  
-                  const unreadPending = res.data.filter((r: any) => !readIds.includes(`PEND-${r.id}`)).length;
-                  setUnreadNotificationsCount(initialUnread + unreadPending);
+                  const unread = res.data.filter((n: any) => !readIds.includes(n.id)).length;
+                  setUnreadNotificationsCount(unread);
                 } else {
-                  setUnreadNotificationsCount(initialUnread);
+                  setUnreadNotificationsCount(0);
                 }
               })
               .catch((err) => {
-                console.error("Failed to load pending retailers count: ", err);
-                setUnreadNotificationsCount(initialUnread);
+                console.error("Failed to load notifications count: ", err);
+                setUnreadNotificationsCount(0);
               });
           } else {
-            setUnreadNotificationsCount(initialUnread);
+            setUnreadNotificationsCount(0);
           }
         };
 
