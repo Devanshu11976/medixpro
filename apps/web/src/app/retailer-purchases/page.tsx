@@ -11,7 +11,10 @@ import {
   XCircle,
   FileText,
   Building2,
+  Loader2,
 } from "lucide-react";
+import api from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 type OrderRecord = {
   orderId: string;
@@ -39,25 +42,63 @@ const DEFAULT_PURCHASES: OrderRecord[] = [
 ];
 
 export default function RetailerPurchasesPage() {
+  const { user, loading: authLoading } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [purchases, setPurchases] = useState<OrderRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("medixpro_purchases");
-      if (stored) {
-        try {
-          setPurchases(JSON.parse(stored));
-        } catch {
+    if (authLoading) return;
+    
+    if (!user || !user.retailer_id) {
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+
+    api.get("/api/orders")
+      .then((res) => {
+        if (!active) return;
+        const allOrders = Array.isArray(res.data) ? res.data : [];
+        const retailerOrders = allOrders
+          .filter((o: any) => o.retailer_id === user.retailer_id)
+          .map((o: any) => {
+            const medicinesStr = o.items
+              .map((item: any) => `${item.medicine_name} (x${item.quantity})`)
+              .join(", ");
+            return {
+              orderId: o.id,
+              medicines: medicinesStr,
+              amount: `$${o.total_amount.toFixed(2)}`,
+              status: o.status,
+              date: new Date(o.created_at).toISOString().split("T")[0],
+            };
+          });
+        setPurchases(retailerOrders);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch live orders:", err);
+        if (!active) return;
+        const stored = localStorage.getItem("medixpro_purchases");
+        if (stored) {
+          try {
+            setPurchases(JSON.parse(stored));
+          } catch {
+            setPurchases(DEFAULT_PURCHASES);
+          }
+        } else {
           setPurchases(DEFAULT_PURCHASES);
         }
-      } else {
-        // Seed default purchases if empty
-        localStorage.setItem("medixpro_purchases", JSON.stringify(DEFAULT_PURCHASES));
-        setPurchases(DEFAULT_PURCHASES);
-      }
-    }
-  }, []);
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user, authLoading]);
 
   const getStatusIcon = (status: OrderRecord["status"]) => {
     switch (status) {
@@ -117,7 +158,14 @@ export default function RetailerPurchasesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {purchases.length > 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-gray-400">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2 text-blue-600" />
+                        Loading purchase ledger...
+                      </td>
+                    </tr>
+                  ) : purchases.length > 0 ? (
                     purchases.map((p) => (
                       <tr key={p.orderId} className="hover:bg-gray-55">
                         <td className="px-6 py-4 font-mono font-bold text-gray-900">{p.orderId}</td>
