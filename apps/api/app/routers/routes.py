@@ -338,6 +338,13 @@ async def refresh(payload: schemas.TokenRefreshRequest, db: AsyncSession = Depen
         access = create_access_token(user.id)
         new_refresh = create_refresh_token(user.id)
         
+        profile_complete = True
+        if user.role == "RETAILER":
+            ret_res = await db.execute(select(models.Retailer).where(models.Retailer.user_id == user.id))
+            retailer = ret_res.scalar_one_or_none()
+            if not retailer:
+                profile_complete = False
+        
         return {
             "access_token": access,
             "refresh_token": new_refresh,
@@ -345,13 +352,20 @@ async def refresh(payload: schemas.TokenRefreshRequest, db: AsyncSession = Depen
             "status": user.status,
             "email": user.email,
             "name": user.name,
-            "profile_complete": True
+            "profile_complete": profile_complete
         }
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
 
 @router.get("/auth/me")
-async def get_me(current_user: models.User = Depends(get_current_user)):
+async def get_me(current_user: models.User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    profile_complete = True
+    if current_user.role == "RETAILER":
+        ret_res = await db.execute(select(models.Retailer).where(models.Retailer.user_id == current_user.id))
+        retailer = ret_res.scalar_one_or_none()
+        if not retailer:
+            profile_complete = False
+
     return {
         "id": current_user.id,
         "email": current_user.email,
@@ -359,7 +373,8 @@ async def get_me(current_user: models.User = Depends(get_current_user)):
         "role": current_user.role,
         "status": current_user.status,
         "auth_provider": current_user.auth_provider,
-        "created_at": current_user.created_at
+        "created_at": current_user.created_at,
+        "profile_complete": profile_complete
     }
 
 # ----------------- MEDICINE ENDPOINTS -----------------
@@ -596,111 +611,94 @@ async def get_invoices(db: AsyncSession = Depends(get_db)):
 
 @router.post("/invoices/ocr")
 async def process_invoice_ocr(file: UploadFile = File(...)):
+    if not settings.groq_api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="Groq API key is not configured on the server. Please check environment variables."
+        )
+
     content = await file.read()
-    filename = file.filename or "invoice.pdf"
+    filename = (file.filename or "invoice.pdf").lower()
     
+    if not filename.endswith(".pdf"):
+        if filename.endswith((".png", ".jpg", ".jpeg")):
+            raise HTTPException(
+                status_code=400,
+                detail="Image invoices are currently not supported because Groq has decommissioned its vision models. Please upload a digital text-based PDF."
+            )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported file format. Only PDF files are supported."
+            )
+            
     extracted_text = ""
-    if filename.lower().endswith(".pdf"):
-        try:
-            pdf_reader = pypdf.PdfReader(io.BytesIO(content))
-            for page in pdf_reader.pages:
-                extracted_text += page.extract_text() or ""
-        except Exception as e:
-            print(f"Error reading PDF content: {e}")
-            
-    extracted_items = []
-    supplier_name = "Supplier from File"
-    amount = 0.0
-
-    # Try extracting with Groq if key is available
-    if settings.groq_api_key:
-        try:
-            client = Groq(api_key=settings.groq_api_key)
-            if extracted_text.strip():
-                prompt = (
-                    "Extract the invoice items from the following medical invoice text. "
-                    "For each item, extract:\n"
-                    "- name: medicine name (e.g. Paracetamol 500mg)\n"
-                    "- qty: integer quantity\n"
-                    "- price: unit price (float number)\n"
-                    "- batch: batch code (string like BTH-XXXXX, generate if not present)\n"
-                    "Also extract:\n"
-                    "- supplier_name: name of the vendor\n"
-                    "- total_amount: float invoice total amount\n"
-                    "Respond with a JSON object that has three keys: 'supplier_name', 'total_amount', and 'items' (a list containing the extracted items)."
-                )
-                
-                completion = client.chat.completions.create(
-                    model="llama3-8b-8192",
-                    messages=[
-                        {"role": "system", "content": "You are a professional invoice extractor. Respond only in valid JSON format."},
-                        {"role": "user", "content": f"{prompt}\n\nInvoice Text:\n{extracted_text}"}
-                    ],
-                    response_format={"type": "json_object"}
-                )
-                
-                result = json.loads(completion.choices[0].message.content)
-                extracted_items = result.get("items", [])
-                supplier_name = result.get("supplier_name", "PharmaCorp Ltd")
-                amount = float(result.get("total_amount", 0.0) or 0.0)
-            elif filename.lower().endswith((".png", ".jpg", ".jpeg")):
-                import base64
-                base64_image = base64.b64encode(content).decode("utf-8")
-                
-                completion = client.chat.completions.create(
-                    model="llama-3.2-11b-vision-preview",
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": (
-                                        "Extract all medicine items from this invoice image. "
-                                        "Return a JSON object with:\n"
-                                        "- supplier_name: string supplier name\n"
-                                        "- total_amount: float invoice amount\n"
-                                        "- items: list of items where each has 'name' (medicine name), 'qty' (integer quantity), 'price' (float unit price), and 'batch' (batch ID starting with BTH-)."
-                                    )
-                                },
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": f"data:image/jpeg;base64,{base64_image}"
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    response_format={"type": "json_object"}
-                )
-                result = json.loads(completion.choices[0].message.content)
-                extracted_items = result.get("items", [])
-                supplier_name = result.get("supplier_name", "PharmaCorp Ltd")
-                amount = float(result.get("total_amount", 0.0) or 0.0)
-        except Exception as e:
-            print(f"Error calling Groq API: {e}")
-
-    # Heuristic fallback if LLM extraction yielded nothing
-    if not extracted_items:
-        # Search for capitalization matches or use words from file name to make it look realistic
-        words = re.findall(r'[a-zA-Z]{3,}', extracted_text or filename)
-        exclude = {'invoice', 'pdf', 'png', 'jpg', 'jpeg', 'bill', 'receipt', 'date', 'total', 'amount', 'tax', 'page', 'address', 'phone', 'supplier', 'name', 'qty', 'price', 'item', 'description'}
-        med_words = [w.capitalize() for w in words if w.lower() not in exclude][:4]
+    try:
+        pdf_reader = pypdf.PdfReader(io.BytesIO(content))
+        for page in pdf_reader.pages:
+            extracted_text += page.extract_text() or ""
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to read PDF file: {str(e)}"
+        )
         
-        if not med_words:
-            med_words = ["Paracetamol", "Amoxicillin", "Omeprazole"]
+    if not extracted_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="No readable text was found in the PDF. Scanned or image-only PDFs are not supported. Please upload a digital text-based PDF."
+        )
+        
+    # Attempt extraction with active Groq models in sequence
+    models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    last_error = None
+    result = None
+    
+    client = Groq(api_key=settings.groq_api_key)
+    prompt = (
+        "Extract the invoice items from the following medical invoice text. "
+        "For each item, extract:\n"
+        "- name: medicine name (e.g. Paracetamol 500mg)\n"
+        "- qty: integer quantity\n"
+        "- price: unit price (float number)\n"
+        "- batch: batch code (string like BTH-XXXXX, generate if not present)\n"
+        "Also extract:\n"
+        "- supplier_name: name of the vendor\n"
+        "- total_amount: float invoice total amount\n"
+        "Respond with a JSON object that has three keys: 'supplier_name', 'total_amount', and 'items' (a list containing the extracted items)."
+    )
+    
+    for model in models_to_try:
+        try:
+            completion = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": "You are a professional invoice extractor. Respond only in valid JSON format."},
+                    {"role": "user", "content": f"{prompt}\n\nInvoice Text:\n{extracted_text}"}
+                ],
+                response_format={"type": "json_object"}
+            )
+            result = json.loads(completion.choices[0].message.content)
+            break  # success, break loop
+        except Exception as e:
+            print(f"Failed to extract with model {model}: {e}")
+            last_error = e
             
-        extracted_items = []
-        for i, name in enumerate(med_words):
-            extracted_items.append({
-                "name": f"{name} 500mg" if not name.endswith("mg") else name,
-                "qty": 100 * (i + 1) + 50,
-                "price": 2.50 + (i * 3.50),
-                "batch": f"BTH-2026-09{10+i}"
-            })
-        supplier_name = "PharmaCorp Ltd"
-        amount = sum(item["qty"] * item["price"] for item in extracted_items)
+    if not result:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to extract invoice data using Groq AI. Error: {str(last_error or 'Unknown error')}"
+        )
+        
+    extracted_items = result.get("items", [])
+    supplier_name = result.get("supplier_name", "Supplier from File")
+    amount = float(result.get("total_amount", 0.0) or 0.0)
+    
+    if not extracted_items:
+        raise HTTPException(
+            status_code=422,
+            detail="Groq AI was unable to find or extract any medicine items from the invoice text. Please verify the invoice format."
+        )
 
     return {
         "status": "success",

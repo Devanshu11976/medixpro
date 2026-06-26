@@ -24,7 +24,7 @@ export default function CompleteProfilePage() {
   useEffect(() => {
     if (user) {
       setOwnerName(user.name || "");
-      if (user.status === "PENDING") {
+      if (user.status === "PENDING" && user.profile_complete) {
         setIsPending(true);
       }
     }

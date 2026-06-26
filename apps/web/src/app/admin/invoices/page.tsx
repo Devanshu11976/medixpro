@@ -86,17 +86,12 @@ export default function InvoicesPage() {
       setAmount(amount);
       setExtractedItems(items);
       setStep("extracted");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to parse invoice:", error);
-      alert("Failed to parse the uploaded invoice. Using local mock/fallback.");
-      // Fallback
-      setSupplierName("PharmaCorp Ltd");
-      setAmount(25000.0);
-      setExtractedItems([
-        { name: "Paracetamol 500mg", qty: 2500, price: 2.50, batch: "BTH-2026-0902" },
-        { name: "Amoxicillin 250mg", qty: 1200, price: 8.00, batch: "BTH-2026-0903" },
-      ]);
-      setStep("extracted");
+      const errMsg = error?.response?.data?.detail || "Failed to parse the uploaded invoice. Please ensure it is a digital text-based PDF.";
+      alert(errMsg);
+      setFileName("");
+      setStep("idle");
     } finally {
       setIsProcessing(false);
     }

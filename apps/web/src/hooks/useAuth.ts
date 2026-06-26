@@ -9,6 +9,7 @@ export interface UserSession {
   name: string;
   role: "ADMIN" | "WORKER" | "RETAILER";
   status: "ACTIVE" | "PENDING" | "DISABLED";
+  profile_complete?: boolean;
   token?: string;
 }
 
@@ -35,7 +36,8 @@ export function useAuth() {
               email: res.data.email,
               name: res.data.name,
               role: res.data.role,
-              status: res.data.status
+              status: res.data.status,
+              profile_complete: res.data.profile_complete
             };
             setUser(freshUser);
             localStorage.setItem("medixpro_user", JSON.stringify(freshUser));
@@ -57,12 +59,12 @@ export function useAuth() {
     setLoading(true);
     try {
       const response = await api.post("/api/auth/login", { email, password });
-      const { access_token, refresh_token, role, status, name } = response.data;
+      const { access_token, refresh_token, role, status, name, profile_complete } = response.data;
       
       localStorage.setItem("medixpro_access_token", access_token);
       localStorage.setItem("medixpro_refresh_token", refresh_token);
       
-      const session: UserSession = { email, name, role, status };
+      const session: UserSession = { email, name, role, status, profile_complete: profile_complete !== false };
       localStorage.setItem("medixpro_user", JSON.stringify(session));
       localStorage.setItem("medixpro_role", role);
       
@@ -91,7 +93,7 @@ export function useAuth() {
       localStorage.setItem("medixpro_access_token", access_token);
       localStorage.setItem("medixpro_refresh_token", refresh_token);
       
-      const session: UserSession = { email, name, role, status };
+      const session: UserSession = { email, name, role, status, profile_complete };
       localStorage.setItem("medixpro_user", JSON.stringify(session));
       localStorage.setItem("medixpro_role", role);
       
@@ -124,7 +126,7 @@ export function useAuth() {
       
       // Update local status to PENDING
       if (user) {
-        const updated = { ...user, status: "PENDING" as const };
+        const updated = { ...user, status: "PENDING" as const, profile_complete: true };
         setUser(updated);
         localStorage.setItem("medixpro_user", JSON.stringify(updated));
       }
