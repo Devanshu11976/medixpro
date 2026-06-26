@@ -52,6 +52,48 @@ export function LoginForm() {
     }
   }, [user]);
 
+  useEffect(() => {
+    // Check if there is Google SSO data from mobile redirect
+    const ssoDataStr = sessionStorage.getItem("google_sso_data");
+    if (ssoDataStr) {
+      try {
+        const ssoData = JSON.parse(ssoDataStr);
+        sessionStorage.removeItem("google_sso_data");
+        
+        const processMobileGoogleLogin = async () => {
+          try {
+            setIsSubmitting(true);
+            const { session, profile_complete } = await loginWithGoogle(
+              ssoData.email,
+              ssoData.name,
+              ssoData.token
+            );
+            
+            if (!profile_complete) {
+              router.push("/login/complete-profile");
+            } else {
+              if (session.status === "PENDING") {
+                setPendingShop(session.name);
+                setPendingOwner(session.name);
+                setMode("pending");
+              } else if (session.status === "ACTIVE") {
+                router.push("/retailer-home");
+              }
+            }
+          } catch (err: any) {
+            setFormError(err.message || "Google authentication failed.");
+          } finally {
+            setIsSubmitting(false);
+          }
+        };
+        
+        processMobileGoogleLogin();
+      } catch (e) {
+        console.error("Error parsing Google SSO redirect data:", e);
+      }
+    }
+  }, []);
+
   async function onSubmit(values: LoginFormValues) {
     setFormError(null);
     setIsSubmitting(true);
