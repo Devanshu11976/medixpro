@@ -193,64 +193,66 @@ export default function OrdersPage() {
 
               {/* Orders Table */}
               <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                <table className="w-full border-collapse text-left text-sm text-gray-500">
-                  <thead className="border-b border-gray-200 bg-gray-50 text-xs font-bold uppercase text-gray-700">
-                    <tr>
-                      <th className="px-6 py-4">Order ID</th>
-                      <th className="px-6 py-4">Retailer</th>
-                      <th className="px-6 py-4">Ordered Date</th>
-                      <th className="px-6 py-4">Items count</th>
-                      <th className="px-6 py-4">Total Amount</th>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {filteredOrders.length > 0 ? (
-                      filteredOrders.map((order) => (
-                        <tr
-                          key={order.id}
-                          className={`hover:bg-gray-50/50 cursor-pointer transition-colors ${
-                            selectedOrder?.id === order.id ? "bg-blue-50/20" : ""
-                          }`}
-                          onClick={() => setSelectedOrder(order)}
-                        >
-                          <td className="px-6 py-4 font-mono font-bold text-gray-900">{order.id}</td>
-                          <td className="px-6 py-4 font-semibold text-gray-900">{order.retailer}</td>
-                          <td className="px-6 py-4 text-gray-600">{order.date}</td>
-                          <td className="px-6 py-4 text-gray-600">
-                            {order.items.reduce((acc, curr) => acc + curr.qty, 0)} units
-                          </td>
-                          <td className="px-6 py-4 font-bold text-gray-900">{order.amount}</td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusStyle(
-                                order.status
-                              )}`}
-                            >
-                              {getStatusIcon(order.status)}
-                              {order.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => setSelectedOrder(order)}
-                              className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
-                            >
-                              Inspect <Eye className="h-3 w-3" />
-                            </button>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-left text-sm text-gray-500" style={{ minWidth: "850px" }}>
+                    <thead className="border-b border-gray-200 bg-gray-50 text-xs font-bold uppercase text-gray-700">
+                      <tr>
+                        <th className="px-6 py-4">Order ID</th>
+                        <th className="px-6 py-4">Retailer</th>
+                        <th className="px-6 py-4">Ordered Date</th>
+                        <th className="px-6 py-4">Items count</th>
+                        <th className="px-6 py-4">Total Amount</th>
+                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {filteredOrders.length > 0 ? (
+                        filteredOrders.map((order) => (
+                          <tr
+                            key={order.id}
+                            className={`hover:bg-gray-50/50 cursor-pointer transition-colors ${
+                              selectedOrder?.id === order.id ? "bg-blue-50/20" : ""
+                            }`}
+                            onClick={() => setSelectedOrder(order)}
+                          >
+                            <td className="px-6 py-4 font-mono font-bold text-gray-900">{order.id}</td>
+                            <td className="px-6 py-4 font-semibold text-gray-900">{order.retailer}</td>
+                            <td className="px-6 py-4 text-gray-600">{order.date}</td>
+                            <td className="px-6 py-4 text-gray-600">
+                              {order.items.reduce((acc, curr) => acc + curr.qty, 0)} units
+                            </td>
+                            <td className="px-6 py-4 font-bold text-gray-900">{order.amount}</td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusStyle(
+                                  order.status
+                                )}`}
+                              >
+                                {getStatusIcon(order.status)}
+                                {order.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => setSelectedOrder(order)}
+                                className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
+                              >
+                                Inspect <Eye className="h-3 w-3" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className="py-12 text-center text-gray-400">
+                            No orders in this category.
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={7} className="py-12 text-center text-gray-400">
-                          No orders in this category.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
