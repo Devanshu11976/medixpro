@@ -53,7 +53,8 @@ class Settings(BaseSettings):
     postgres_password: str = ""
     
     # Railway/Production
-    port: int = 8000
+    port: int = 8080
+
 
     @field_validator('database_url')
     @classmethod

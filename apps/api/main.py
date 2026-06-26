@@ -34,7 +34,7 @@ from app.middleware.security import security_middleware, csrf_protection_middlew
 async def lifespan(app: FastAPI):
     # Startup logic
     logger.info(f"Starting Medixpro API in {settings.environment} mode")
-    logger.info(f"Environment loaded: PORT={os.getenv('PORT', '8000')}, DATABASE_URL configured: {bool(settings.database_url)}")
+    logger.info(f"Environment loaded: PORT={os.getenv('PORT', '8080')}, DATABASE_URL configured: {bool(settings.database_url)}")
     
     # Initialize database engine (lazy initialization)
     try:

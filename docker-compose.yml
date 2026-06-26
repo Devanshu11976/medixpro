@@ -28,7 +28,7 @@ services:
     build:
       context: ./apps/api
     ports:
-      - "8000:8000"
+      - "8080:8080"
     depends_on:
       - postgres
       - redis
@@ -36,7 +36,7 @@ services:
       - ./apps/api:/app
     env_file:
       - .env
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn main:app --host 0.0.0.0 --port 8080 --reload
     networks:
       - medixpro-network
 

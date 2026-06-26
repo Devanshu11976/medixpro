@@ -38,8 +38,9 @@ RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Railway uses PORT environment variable
-ENV PORT=8000
-EXPOSE 8000
+ENV PORT=8080
+EXPOSE 8080
+
 
 # Health check for Railway
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
